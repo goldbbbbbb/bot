@@ -1,2 +1,2 @@
-python C:\Users\GB\Desktop\bot\main.py
+python C:\Users\GB\Desktop\bot\run.py
 pause
