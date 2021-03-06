@@ -1,33 +1,55 @@
 # IMPORT DISCORD.PY. ALLOWS ACCESS TO DISCORD'S API.
 import discord
+from discord.ext import commands
 
-# GETS THE CLIENT OBJECT FROM DISCORD.PY. CLIENT IS SYNONYMOUS WITH BOT.
-bot = discord.Client()
+intents = discord.Intents.all()
 
-# EVENT LISTENER FOR WHEN THE BOT HAS SWITCHED FROM OFFLINE TO ONLINE.
+#指令前綴
+bot = discord.ext.commands.Bot(command_prefix = "!");
+
+#BOT開始運作的確認訊息
 @bot.event
 async def on_ready():
-	# CREATES A COUNTER TO KEEP TRACK OF HOW MANY GUILDS / SERVERS THE BOT IS CONNECTED TO.
-	guild_count = 0
+	print(f'佩可機器人準備完成!')
 
-	# LOOPS THROUGH ALL THE GUILD / SERVERS THAT THE BOT IS ASSOCIATED WITH.
-	for guild in bot.guilds:
-		# PRINT THE SERVER'S ID AND NAME.
-		print(f"- {guild.id} (name: {guild.name})")
+#報刀功能 !book
+@bot.command()
+async def book(ctx, boss, damage, notice):
+	await ctx.send(f'{ctx.author.mention} 預約 {boss} 王, 傷害: {damage}, 備注: {notice}')
 
-		# INCREMENTS THE GUILD COUNTER.
-		guild_count = guild_count + 1
+#取消報刀功能 !unbook
+@bot.command()
+async def unbook(ctx, boss, damage, notice):
+	await ctx.send(f'{ctx.author.mention} 已取消 {boss} 王 的報刀。')
 
-	# PRINTS HOW MANY GUILDS / SERVERS THE BOT IS IN.
-	print("SampleDiscordBot is in " + str(guild_count) + " guilds.")
+#掛樹求救功能 !sos
+@bot.command()
+async def sos(ctx):
+   await ctx.send(f'{ctx.author.mention} 掛樹了，有人能幫幫他嗎？')
 
-# EVENT LISTENER FOR WHEN A NEW MESSAGE IS SENT TO A CHANNEL.
 @bot.event
-async def on_message(message):
-	# CHECKS IF THE MESSAGE THAT WAS SENT IS EQUAL TO "HELLO".
-	if message.content == "hello":
-		# SENDS BACK A MESSAGE TO THE CHANNEL.
-		await message.channel.send("hey dirtbag")
+async def on_raw_reaction_add(payload):
+    message_id = payload.message_id
+    if message_id == 817683128855691266:
+      guild_id = payload.guild_id
+      guild = discord.utils.find(lambda g: g.id == guild_id, bot.guilds)
+
+      if payload.emoji.name == 'happy':
+        role = discord.utils.get(guild.roles, name='TREE')
+        print("first part done.")
+      else:
+        role = discord.utils.get(guild.roles, name=payload.emoji.name)
+        
+      if role is not None:
+        member = payload.member
+        print('second part done')
+        if member is not None:
+          await member.add_roles(role)
+          print("Done")
+        else:
+          print("Member not found.")
+      else:
+        print("Role not found")
 
 # EXECUTES THE BOT WITH THE SPECIFIED TOKEN. TOKEN HAS BEEN REMOVED AND USED JUST AS AN EXAMPLE.
-bot.run("NzA0OTcwNzUyNzQyNjUzOTYz.Xqk5ww.1U_-WdW4aeGWCNF7bOJkLAu_2TM")
+bot.run("ODE2ODk0ODc0OTY3MzQzMTU0.YEBmow.sx1h53VnHvzK3ACP-N5kgTW8gjU") 
