@@ -1,7 +1,17 @@
 # IMPORT DISCORD.PY. ALLOWS ACCESS TO DISCORD'S API.
+# IMPORT GSPREAD, ALLOWS ACCESS TO READ GOOGLE SHEETS.
 import discord
 from discord.ext import commands
 import time
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+#setting to read the data of sheet which we assigned
+
+scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
+creds = ServiceAccountCredentials.from_json_keyfile_name('pekodcbot.json',scope)
+client = gspread.authorize(creds)
+sheet = client.open('21/3月出刀紀錄').sheet1
 
 #prefix of the commands in server.
 bot = discord.ext.commands.Bot(command_prefix = "!")
@@ -9,54 +19,114 @@ bot = discord.ext.commands.Bot(command_prefix = "!")
 channels = {}
 messages = {}
 
+def is_in_channel(ctx, channel_name):
+  return ctx.channel.name == channels[channel_name].name
+
 #Confirm message when bot succesfully run.
 @bot.event
 async def on_ready():
+
+  #817674249699459072 掛樹頻->報刀頻
+  #817829173069348884 刀表->報刀表
+  #818157150232248341 admin->幹部頻
+  #817834334365941761 刀表頻msg->報刀表msg
   channels["command"] = bot.get_channel(817674249699459072)
   channels["table"] = bot.get_channel(817829173069348884)
+  channels["admin"] = bot.get_channel(818157150232248341)
 
   messages["table"] = await channels["table"].fetch_message(817834334365941761)
 
   await update_table()
   print(f'佩可機器人準備完成!')
 
+@bot.command()
+async def setchannel(ctx, channel_name, channel_mention):
+  if not is_in_channel(ctx, "admin"):
+    return
+
+  channels[channel_name] = await bot.fetch_channel(channel_mention[2:-1])
+  await ctx.send(f'佩可機器人已將 {channel_name} 頻道設為 {channels[channel_name].mention}')
+
+@bot.command()
+async def showchannels(ctx):
+  if not is_in_channel(ctx, "admin"):
+    return
+  
+  msg = ''
+  for name, channel in channels.items():
+    msg += f'{name}: {channel.mention}\n'
+  await ctx.send(msg)
+
+#Check rest of the num of knife !num
+@bot.command()
+async def num(ctx):
+  if not is_in_channel(ctx, "command"):
+    return
+  #get the data in (38,17) of first sheet of the google sheets we assigned.
+  result = sheet.cell(38,17).value
+  await ctx.send(f'目前仍有 {result} 刀未出。')
+
 #BookBoss !book
 
 class KnifeRequest:
-  def __init__(self, user, damage, notice):
+  def __init__(self, user, numknife, damage, notice):
     self.user = user
+    self.numknife = numknife
     self.damage = damage
     self.notice = notice
   
   def __repr__(self):
-    return f'{self.user.display_name}({self.damage}, {self.notice})'
+    return f'{self.user.display_name}(第{self.numknife}刀/{self.damage}/{self.notice})'
 
 # Requests for each boss
 boss_numbers = ['補償', '一王', '二王', '三王', '四王', '五王']
 knife_requests = [[] for _ in boss_numbers]
 
 @bot.command()
-async def book(ctx, boss, damage, notice):
+async def book(ctx, boss, numknife, damage, notice):
+  if not is_in_channel(ctx, "command"):
+    return
+
   msg = ''
 
   try:
     boss = int(boss)
-    msg = f'{ctx.author.mention} 預約 {boss_numbers[boss]} , 傷害: {damage}, 備注: {notice}'
+    numknife = int(numknife)
+    if numknife > 0 and numknife < 4:
+      msg = f'{ctx.author.mention} 預約 {boss_numbers[boss]} , 刀數: {numknife}, 傷害: {damage}, 備注: {notice}'
     #sort the user input into different list base on value of variable boss.
-    knife_requests[boss].append(KnifeRequest(ctx.author, damage, notice))
+    knife_requests[boss].append(KnifeRequest(ctx.author, numknife, damage, notice))
   except:
-    msg = '請按照 !book [幾王] [傷害] [備注] 的方式報刀'
+    msg = '請按照 !book [幾王] [第幾刀] [傷害] [備注] 的方式報刀'
 
   await ctx.send(msg)
   await update_table()
 
-#CancelBooking !unbook (not finished yet)
+#CancelBooking !unbook
 @bot.command()
 async def unbook(ctx, boss):
+  if not is_in_channel(ctx, "command"):
+    return
+
   def filter_for_non_author(knife_request):
-    return ctx.author.display_name != knife_request.username
+    return ctx.author.display_name != knife_request.user.display_name
   knife_requests[int(boss)] = list(filter(filter_for_non_author, knife_requests[int(boss)]))
   await ctx.send(f'{ctx.author.mention} 已取消 {boss} 王 的報刀。')
+  await update_table()
+
+#CancelBookingforguildmember !unbookfor
+@bot.command()
+async def unbookfor(ctx, boss, mention):
+  if not is_in_channel(ctx, "admin"):
+    return
+
+  target_id = mention[3:-1]
+  target_user = await bot.fetch_user(target_id)
+  def filter_for_non_author(knife_request):
+    return target_user.display_name != knife_request.user.display_name
+  knife_requests[int(boss)] = list(filter(filter_for_non_author, knife_requests[int(boss)]))
+  await ctx.send(f'{ctx.author.mention} 已取消 {boss} 王中 {target_user.mention} 的報刀。')
+  await channels['command'].send(f'幹部 {ctx.author.mention} 已取消 {boss} 王中 {target_user.mention} 的報刀。')
   await update_table()
 
 #SeekHelp !sos
@@ -71,6 +141,9 @@ class SosPlayer:
 sos_users = []
 @bot.command()
 async def sos(ctx):
+  if not is_in_channel(ctx, "command"):
+    return
+
   sos_users.append(SosPlayer(ctx.author.mention, ctx.author.display_name))
   await ctx.send(f'{ctx.author.mention} 掛樹了，有人能幫幫他嗎？現時樹上人數: {len(sos_users)}')
   await update_table()
@@ -81,6 +154,9 @@ last_run_next = time.time()
 NEXT_COOLDOWN = 60 # 60s
 @bot.command()
 async def next(ctx):
+  if not is_in_channel(ctx, "command"):
+    return
+
   # Show current/next boss info
   global current_boss, last_run_next
   current_time = time.time()
@@ -102,6 +178,22 @@ async def next(ctx):
   if user_names != "":
     await ctx.send(f'{user_names} 已經到下一隻王了，可以下樹囉。')
     sos_users.clear()
+
+#Setbossnum !set
+@bot.command()
+async def set(ctx, bossnum):
+  if not is_in_channel(ctx, "admin"):
+    return
+
+  try:
+      current_boss = int(bossnum)
+      if current_boss > 0 and current_boss < 6:
+        await channels["command"].send(f'經幹部 {ctx.author.mention} 調整，現在到 {boss_numbers[current_boss]}。')
+        await ctx.send(f'{ctx.author.mention} 已強行調整至 {boss_numbers[current_boss]}')
+      else:
+        await ctx.send(f'請按照 !set [幾王] 的方式調整目前幾王。')
+  except:
+    await ctx.send(f'請按照 !set [幾王] 的方式調整目前幾王。')
 
 async def update_table():
   #Show the nickname of user, instead of mention the user.
