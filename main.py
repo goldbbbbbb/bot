@@ -26,15 +26,15 @@ def is_in_channel(ctx, channel_name):
 @bot.event
 async def on_ready():
 
-  #817674249699459072 掛樹頻->報刀頻
-  #817829173069348884 刀表->報刀表
-  #818157150232248341 admin->幹部頻
-  #817834334365941761 刀表頻msg->報刀表msg
-  channels["command"] = bot.get_channel(817674249699459072)
-  channels["table"] = bot.get_channel(817829173069348884)
-  channels["admin"] = bot.get_channel(818157150232248341)
+  #817674249699459072 掛樹頻->報刀頻 771259390241669132
+  #817829173069348884 刀表->報刀表 818898908407267338
+  #818157150232248341 admin->幹部頻 817851835955281930
+  #817834334365941761 刀表頻msg->報刀表msg 818901761548746752
+  channels["command"] = bot.get_channel(771259390241669132)
+  channels["table"] = bot.get_channel(818898908407267338)
+  channels["admin"] = bot.get_channel(817851835955281930)
 
-  messages["table"] = await channels["table"].fetch_message(817834334365941761)
+  messages["table"] = await channels["table"].fetch_message(818901761548746752)
 
   await update_table()
   print(f'佩可機器人準備完成!')
@@ -83,7 +83,7 @@ boss_numbers = ['補償', '一王', '二王', '三王', '四王', '五王']
 knife_requests = [[] for _ in boss_numbers]
 
 @bot.command()
-async def book(ctx, boss, numknife, damage, notice):
+async def book(ctx, boss, numknife, damage, notice="無"):
   if not is_in_channel(ctx, "command"):
     return
 
@@ -94,24 +94,32 @@ async def book(ctx, boss, numknife, damage, notice):
     numknife = int(numknife)
     if numknife > 0 and numknife < 4:
       msg = f'{ctx.author.mention} 預約 {boss_numbers[boss]} , 刀數: {numknife}, 傷害: {damage}, 備注: {notice}'
-    #sort the user input into different list base on value of variable boss.
-    knife_requests[boss].append(KnifeRequest(ctx.author, numknife, damage, notice))
+      #sort the user input into different list base on value of variable boss.
+      knife_requests[boss].append(KnifeRequest(ctx.author, numknife, damage, notice))
+    else:
+      msg = '請按照 !book [幾王] [第幾刀] [傷害] [備注] 的方式報刀'
   except:
     msg = '請按照 !book [幾王] [第幾刀] [傷害] [備注] 的方式報刀'
+
 
   await ctx.send(msg)
   await update_table()
 
 #CancelBooking !unbook
 @bot.command()
-async def unbook(ctx, boss):
+async def unbook(ctx, numknife):
   if not is_in_channel(ctx, "command"):
     return
 
-  def filter_for_non_author(knife_request):
-    return ctx.author.display_name != knife_request.user.display_name
-  knife_requests[int(boss)] = list(filter(filter_for_non_author, knife_requests[int(boss)]))
-  await ctx.send(f'{ctx.author.mention} 已取消 {boss} 王 的報刀。')
+  def filter_function(knife_request):
+    if ctx.author.display_name != knife_request.user.display_name:
+      return True # All non-author entries must stay
+    return knife_request.numknife != int(numknife) # requests with different numknife stay
+
+  # Loop through all bosses
+  for boss in range(len(knife_requests)):
+    knife_requests[boss] = list(filter(filter_function, knife_requests[boss]))
+  await ctx.send(f'{ctx.author.mention} 已取消所有 第{numknife}刀 的報刀。')
   await update_table()
 
 #CancelBookingforguildmember !unbookfor
