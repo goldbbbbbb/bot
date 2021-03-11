@@ -86,6 +86,10 @@ class KnifeRequests:
   def __repr__(self):
     return f'{self.extras} | {self.normals}'
 
+  def apply_filter(self, filter_func):
+    self.extras = list(filter(filter_func, self.extras))
+    self.normals = list(filter(filter_func, self.normals))
+
   def add(self, request, is_extra):
     if is_extra:
       self.extras.append(request)
@@ -115,7 +119,11 @@ async def book(ctx, boss, numknife, damage, notice="無", extra=False):
       knife_requests[boss].add(KnifeRequest(ctx.author, numknife, damage, notice), bool(extra))
     else:
       knife_requests[boss].append(KnifeRequest(ctx.author, numknife, damage, notice))
-  except:
+  except Exception as err:
+    # for debug only
+    from traceback import print_stack
+    print_stack()
+
     msg = '請按照 !book [幾王] [第幾刀] [傷害] [備注] 的方式報刀'
 
   await ctx.send(msg)
@@ -139,7 +147,10 @@ async def unbook(ctx, numknife):
 
   # Loop through all bosses
   for boss in range(len(knife_requests)):
-    knife_requests[boss] = list(filter(filter_function, knife_requests[boss]))
+    if boss == 0:
+      knife_requests[boss] = list(filter(filter_function, knife_requests[boss]))
+    else:
+      knife_requests[boss].apply_filter(filter_function)
   await ctx.send(f'{ctx.author.mention} 已取消所有 第{numknife}刀 的報刀。')
   await update_table()
 
@@ -153,7 +164,13 @@ async def unbookfor(ctx, boss, mention):
   target_user = await bot.fetch_user(target_id)
   def filter_for_non_author(knife_request):
     return target_user.display_name != knife_request.user.display_name
-  knife_requests[int(boss)] = list(filter(filter_for_non_author, knife_requests[int(boss)]))
+  
+  boss = int(boss)
+
+  if boss == 0:
+    knife_requests[boss] = list(filter(filter_for_non_author, knife_requests[boss]))
+  else:
+    knife_requests[boss].apply_filter(filter_for_non_author)
   await ctx.send(f'{ctx.author.mention} 已取消 {boss} 王中 {target_user.mention} 的報刀。')
   await channels['command'].send(f'幹部 {ctx.author.mention} 已取消 {boss} 王中 {target_user.mention} 的報刀。')
   await update_table()
