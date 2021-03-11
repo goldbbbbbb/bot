@@ -29,12 +29,12 @@ async def on_ready():
   #817674249699459072 掛樹頻->報刀頻 771259390241669132
   #817829173069348884 刀表->報刀表 818898908407267338
   #818157150232248341 admin->幹部頻 817851835955281930
-  #817834334365941761 刀表頻msg->報刀表msg 818901761548746752
-  channels["command"] = bot.get_channel(771259390241669132)
-  channels["table"] = bot.get_channel(818898908407267338)
-  channels["admin"] = bot.get_channel(817851835955281930)
+  #817834334365941761 刀表頻msg->報刀表msg 818904471606132767
+  channels["command"] = bot.get_channel(817674249699459072)
+  channels["table"] = bot.get_channel(817829173069348884)
+  channels["admin"] = bot.get_channel(818157150232248341)
 
-  messages["table"] = await channels["table"].fetch_message(818901761548746752)
+  messages["table"] = await channels["table"].fetch_message(817834334365941761)
 
   await update_table()
   print(f'佩可機器人準備完成!')
@@ -78,12 +78,26 @@ class KnifeRequest:
   def __repr__(self):
     return f'{self.user.display_name}(第{self.numknife}刀/{self.damage}/{self.notice})'
 
+class KnifeRequests:
+  def __init__(self):
+    self.extras = []
+    self.normals = []
+
+  def __repr__(self):
+    return f'{self.extras} | {self.normals}'
+
+  def add(self, request, is_extra):
+    if is_extra:
+      self.extras.append(request)
+    else:
+      self.normals.append(request)
+
 # Requests for each boss
 boss_numbers = ['補償', '一王', '二王', '三王', '四王', '五王']
-knife_requests = [[] for _ in boss_numbers]
+knife_requests = [[]] + [KnifeRequests() for _ in range(len(boss_numbers)-1)]
 
 @bot.command()
-async def book(ctx, boss, numknife, damage, notice="無"):
+async def book(ctx, boss, numknife, damage, notice="無", extra=False):
   if not is_in_channel(ctx, "command"):
     return
 
@@ -93,17 +107,24 @@ async def book(ctx, boss, numknife, damage, notice="無"):
     boss = int(boss)
     numknife = int(numknife)
     if numknife > 0 and numknife < 4:
-      msg = f'{ctx.author.mention} 預約 {boss_numbers[boss]} , 刀數: {numknife}, 傷害: {damage}, 備注: {notice}'
-      #sort the user input into different list base on value of variable boss.
-      knife_requests[boss].append(KnifeRequest(ctx.author, numknife, damage, notice))
+      msg = f'{ctx.author.mention} ' + ('補償刀' if bool(extra) else '') + f'預約 {boss_numbers[boss]} , 刀數: {numknife}, 傷害: {damage}, 備注: {notice}'
     else:
-      msg = '請按照 !book [幾王] [第幾刀] [傷害] [備注] 的方式報刀'
+      raise ValueError
+      #sort the user input into different list base on value of variable boss.
+    if boss > 0:
+      knife_requests[boss].add(KnifeRequest(ctx.author, numknife, damage, notice), bool(extra))
+    else:
+      knife_requests[boss].append(KnifeRequest(ctx.author, numknife, damage, notice))
   except:
     msg = '請按照 !book [幾王] [第幾刀] [傷害] [備注] 的方式報刀'
 
-
   await ctx.send(msg)
   await update_table()
+
+# Requests for each boss (long make up time)
+@bot.command()
+async def extra(ctx, boss, numknife, damage, notice="無"):
+  await book(ctx, boss, numknife, damage, notice, True)
 
 #CancelBooking !unbook
 @bot.command()
@@ -146,13 +167,20 @@ class SosPlayer:
   def __repr__(self):
     return self.display_name
 
-sos_users = []
+  def __hash__(self):
+    return hash((self.mention, self.display_name))
+
+  def __eq__(self, other):
+    if not isinstance(other, type(self)): return NotImplemented
+    return self.mention == other.mention and self.display_name == other.display_name
+
+sos_users = set()
 @bot.command()
 async def sos(ctx):
   if not is_in_channel(ctx, "command"):
     return
-
-  sos_users.append(SosPlayer(ctx.author.mention, ctx.author.display_name))
+  sos_users.add(SosPlayer(ctx.author.mention, ctx.author.display_name))
+  print(sos_users)
   await ctx.send(f'{ctx.author.mention} 掛樹了，有人能幫幫他嗎？現時樹上人數: {len(sos_users)}')
   await update_table()
 
@@ -168,7 +196,6 @@ async def next(ctx):
   # Show current/next boss info
   global current_boss, last_run_next
   current_time = time.time()
-  print(current_time, " ", last_run_next, " ", NEXT_COOLDOWN)
   if current_time <= last_run_next + NEXT_COOLDOWN:
     await ctx.send(f'此指令還有 {int(NEXT_COOLDOWN - (current_time-last_run_next))} 秒冷卻。')
     return
@@ -186,6 +213,8 @@ async def next(ctx):
   if user_names != "":
     await ctx.send(f'{user_names} 已經到下一隻王了，可以下樹囉。')
     sos_users.clear()
+    print(sos_users)
+    await update_table()
 
 #Setbossnum !set
 @bot.command()
@@ -194,10 +223,12 @@ async def set(ctx, bossnum):
     return
 
   try:
-      current_boss = int(bossnum)
-      if current_boss > 0 and current_boss < 6:
+      if int(bossnum) > 0 and int(bossnum) < 6:
+        global current_boss
+        current_boss = int(bossnum)
         await channels["command"].send(f'經幹部 {ctx.author.mention} 調整，現在到 {boss_numbers[current_boss]}。')
         await ctx.send(f'{ctx.author.mention} 已強行調整至 {boss_numbers[current_boss]}')
+        await update_table()
       else:
         await ctx.send(f'請按照 !set [幾王] 的方式調整目前幾王。')
   except:
@@ -212,12 +243,16 @@ async def update_table():
       formatted += f'{info}, '
     return formatted
 
-  table = '```'
+  table = '```diff\n'
   for i in range(1, len(boss_numbers)):
-    table += f'{boss_numbers[i]}: {format_list_infos(knife_requests[i])}\n' # 一至五王
+    if i == current_boss:
+      table += f'->{boss_numbers[i]}: {knife_requests[i]}<-\n'
+    else:
+      table += f'{boss_numbers[i]}: {knife_requests[i]}\n' # 一至五王
   table += '\n'
   table += f'{boss_numbers[0]}: {format_list_infos(knife_requests[0])}\n' # 補償
-  table += f'樹上: {format_list_infos(sos_users)}\n'
+  table += f'樹上: {sos_users if len(sos_users)>0 else ""}\n'
   table += '```'
   await messages["table"].edit(content=table)
 
+  #->....<-
