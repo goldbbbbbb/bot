@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 import time
 import gspread
+import shelve
 from oauth2client.service_account import ServiceAccountCredentials
 
 #setting to read the data of sheet which we assigned
@@ -25,16 +26,27 @@ def is_in_channel(ctx, channel_name):
 #Confirm message when bot succesfully run.
 @bot.event
 async def on_ready():
+  channels_test = {}
+  messages_test = {}
+  channels_test["command"] = bot.get_channel(817674249699459072)
+  channels_test["table"] = bot.get_channel(817829173069348884)
+  channels_test["admin"] = bot.get_channel(818157150232248341)
+  messages_test["table"] = await channels_test["table"].fetch_message(817834334365941761)
 
   #817674249699459072 掛樹頻->報刀頻 771259390241669132
   #817829173069348884 刀表->報刀表 818898908407267338
   #818157150232248341 admin->幹部頻 817851835955281930
   #817834334365941761 刀表頻msg->報刀表msg 818904471606132767
-  channels["command"] = bot.get_channel(817674249699459072)
-  channels["table"] = bot.get_channel(817829173069348884)
-  channels["admin"] = bot.get_channel(818157150232248341)
+  channels["command"] = bot.get_channel(771259390241669132)
+  channels["table"] = bot.get_channel(818898908407267338)
+  channels["admin"] = bot.get_channel(817851835955281930)
 
-  messages["table"] = await channels["table"].fetch_message(817834334365941761)
+  messages["table"] = await channels["table"].fetch_message(818904471606132767)
+
+  # Comment out these lines to use in actual server
+  # globals()['channels'] = channels_test
+  # globals()['messages'] = messages_test
+  #################################################
 
   await update_table()
   print(f'佩可機器人準備完成!')
@@ -71,12 +83,24 @@ async def num(ctx):
 class KnifeRequest:
   def __init__(self, user, numknife, damage, notice):
     self.user = user
+    self.user_id = user.id
     self.numknife = numknife
     self.damage = damage
     self.notice = notice
   
   def __repr__(self):
     return f'{self.user.display_name}(第{self.numknife}刀/{self.damage}/{self.notice})'
+  
+  def __getstate__(self):
+    d = dict(self.__dict__)
+    del d['user'] # Not serializable
+    return d
+  
+  def __setstate__(self, d):
+    self.__dict__ = d # User is not defined after this
+
+  async def fetch_user(self):
+    self.user = await bot.fetch_user(self.user_id)
 
 class KnifeRequests:
   def __init__(self):
@@ -85,6 +109,12 @@ class KnifeRequests:
 
   def __repr__(self):
     return f'{self.extras} | {self.normals}'
+
+  def __getstate__(self):
+    return self.__dict__
+  
+  def __setstate__(self, d):
+    self.__dict__ = d
 
   def apply_filter(self, filter_func):
     self.extras = list(filter(filter_func, self.extras))
@@ -95,6 +125,13 @@ class KnifeRequests:
       self.extras.append(request)
     else:
       self.normals.append(request)
+
+  async def fetch_users(self):
+    for request in self.extras:
+      await request.fetch_user()
+
+    for request in self.normals:
+      await request.fetch_user()
 
 # Requests for each boss
 boss_numbers = ['補償', '一王', '二王', '三王', '四王', '五王']
@@ -129,10 +166,10 @@ async def book(ctx, boss, numknife, damage, notice="無", extra=False):
   await ctx.send(msg)
   await update_table()
 
-# Requests for each boss (long make up time)
+# Requests for each boss (long make up time) !extra
 @bot.command()
 async def extra(ctx, boss, numknife, damage, notice="無"):
-  await book(ctx, boss, numknife, damage, notice, True)
+  await b(ctx, boss, numknife, damage, notice, True)
 
 #CancelBooking !unbook
 @bot.command()
@@ -197,7 +234,6 @@ async def sos(ctx):
   if not is_in_channel(ctx, "command"):
     return
   sos_users.add(SosPlayer(ctx.author.mention, ctx.author.display_name))
-  print(sos_users)
   await ctx.send(f'{ctx.author.mention} 掛樹了，有人能幫幫他嗎？現時樹上人數: {len(sos_users)}')
   await update_table()
 
@@ -268,8 +304,40 @@ async def update_table():
       table += f'{boss_numbers[i]}: {knife_requests[i]}\n' # 一至五王
   table += '\n'
   table += f'{boss_numbers[0]}: {format_list_infos(knife_requests[0])}\n' # 補償
-  table += f'樹上: {sos_users if len(sos_users)>0 else ""}\n'
+  table += f'樹上: {format_list_infos(sos_users) if len(sos_users)>0 else ""}\n'
   table += '```'
   await messages["table"].edit(content=table)
 
-  #->....<-
+# Save and Load everything in the table (knife_requests and sos_users)
+var_to_save = ['knife_requests', 'sos_users']
+def save_data(filename):
+  shelf = shelve.open(filename, 'n')
+  for key in var_to_save:
+    shelf[key] = globals()[key]
+  shelf.close()
+
+def load_data(filename):
+  shelf = shelve.open(filename)
+  for key in shelf:
+    globals()[key] = shelf[key]
+  shelf.close()
+
+@bot.command()
+async def save(ctx, filename=''):
+  if not is_in_channel(ctx, 'admin'):
+    return
+  save_data(f'./backup/states_{filename}.dir')
+  await ctx.send(f'已將刀表儲存至backup/states_{filename}')
+  
+@bot.command()
+async def load(ctx, filename=''):
+  if not is_in_channel(ctx, 'admin'):
+    return
+  msg = await ctx.send('讀取刀表中..')
+  load_data(f'./backup/states_{filename}.dir')
+  # Fetch back the user objects
+  for i in range(1, len(knife_requests)):
+    await knife_requests[i].fetch_users()
+    await msg.edit(content=msg.clean_content + '.') # Simulate loading
+  await update_table()
+  await msg.edit(content=msg.clean_content + '已完成')
