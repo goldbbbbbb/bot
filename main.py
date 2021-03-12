@@ -138,7 +138,7 @@ boss_numbers = ['補償', '一王', '二王', '三王', '四王', '五王']
 knife_requests = [[]] + [KnifeRequests() for _ in range(len(boss_numbers)-1)]
 
 @bot.command()
-async def book(ctx, boss, numknife, damage, notice="無", extra=False):
+async def b(ctx, boss, numknife, damage, notice="無", extra=False):
   if not is_in_channel(ctx, "command"):
     return
 
@@ -168,12 +168,12 @@ async def book(ctx, boss, numknife, damage, notice="無", extra=False):
 
 # Requests for each boss (long make up time) !extra
 @bot.command()
-async def extra(ctx, boss, numknife, damage, notice="無"):
+async def eb(ctx, boss, numknife, damage, notice="無"):
   await b(ctx, boss, numknife, damage, notice, True)
 
 #CancelBooking !unbook
 @bot.command()
-async def unbook(ctx, numknife):
+async def ub(ctx, numknife):
   if not is_in_channel(ctx, "command"):
     return
 
@@ -193,7 +193,7 @@ async def unbook(ctx, numknife):
 
 #CancelBookingforguildmember !unbookfor
 @bot.command()
-async def unbookfor(ctx, boss, mention):
+async def ubf(ctx, boss, mention):
   if not is_in_channel(ctx, "admin"):
     return
 
@@ -240,7 +240,7 @@ async def sos(ctx):
 #Nextboss !next
 current_boss = 1
 last_run_next = time.time()
-NEXT_COOLDOWN = 60 # 60s
+NEXT_COOLDOWN = 1 # 60s
 @bot.command()
 async def next(ctx):
   if not is_in_channel(ctx, "command"):
@@ -255,10 +255,11 @@ async def next(ctx):
   last_run_next = current_time
   current_boss = (current_boss % 5) + 1
   next_users = ''
-  for request in knife_requests[current_boss]:
+  # print(type(knife_requests))
+  for request in knife_requests[current_boss].normals + knife_requests[current_boss].extras:
     next_users += f'{request.user.mention}({request.damage}, {request.notice}) '
   await ctx.send(f'現在到 {boss_numbers[current_boss]}。 {next_users}')
-  
+
   # Tag all sos users
   user_names = ""
   for user in sos_users:
@@ -267,7 +268,8 @@ async def next(ctx):
     await ctx.send(f'{user_names} 已經到下一隻王了，可以下樹囉。')
     sos_users.clear()
     print(sos_users)
-    await update_table()
+  
+  await update_table()
 
 #Setbossnum !set
 @bot.command()
