@@ -72,7 +72,11 @@ async def showchannels(ctx):
 #Check rest of the num of knife !num
 @bot.command()
 async def num(ctx):
+<<<<<<< HEAD
   #let user can use !num in any channel
+=======
+  #Let user can use !num in any channel
+>>>>>>> development
   #if not is_in_channel(ctx, "command"):
     #return
   #get the data in (38,17) of first sheet of the google sheets we assigned.
@@ -82,15 +86,15 @@ async def num(ctx):
 #BookBoss !book
 
 class KnifeRequest:
-  def __init__(self, user, numknife, damage, notice):
+  def __init__(self, user, boss, damage, notice):
     self.user = user
     self.user_id = user.id
-    self.numknife = numknife
+    self.boss = boss
     self.damage = damage
     self.notice = notice
   
   def __repr__(self):
-    return f'{self.user.display_name}(第{self.numknife}刀/{self.damage}/{self.notice})'
+    return f'{self.user.display_name}({self.damage}/{self.notice})'
   
   def __getstate__(self):
     d = dict(self.__dict__)
@@ -109,7 +113,7 @@ class KnifeRequests:
     self.normals = []
 
   def __repr__(self):
-    return f'{self.extras} | {self.normals}'
+    return f'\n長補: {self.extras} \n正刀: {self.normals}'
 
   def __getstate__(self):
     return self.__dict__
@@ -135,53 +139,64 @@ class KnifeRequests:
       await request.fetch_user()
 
 # Requests for each boss
-boss_numbers = ['補償', '一王', '二王', '三王', '四王', '五王']
+boss_numbers = ['短補', '一王', '二王', '三王', '四王', '五王']
 knife_requests = [[]] + [KnifeRequests() for _ in range(len(boss_numbers)-1)]
 
 @bot.command()
+<<<<<<< HEAD
 async def b(ctx, boss, numknife, damage, notice="無", extra=False):
+=======
+async def b(ctx, boss, damage, notice="無", extra=False):
+>>>>>>> development
   if not is_in_channel(ctx, "command"):
     return
 
-  msg = ''
+  msg = ""
 
   try:
     boss = int(boss)
-    numknife = int(numknife)
-    if numknife > 0 and numknife < 4:
-      msg = f'{ctx.author.mention} ' + ('補償刀' if bool(extra) else '') + f'預約 {boss_numbers[boss]} , 刀數: {numknife}, 傷害: {damage}, 備注: {notice}'
-    else:
-      raise ValueError
-      #sort the user input into different list base on value of variable boss.
     if boss > 0:
-      knife_requests[boss].add(KnifeRequest(ctx.author, numknife, damage, notice), bool(extra))
+      knife_requests[boss].add(KnifeRequest(ctx.author, boss, damage, notice), bool(extra))
     else:
-      knife_requests[boss].append(KnifeRequest(ctx.author, numknife, damage, notice))
-  except Exception as err:
-    # for debug only
-    from traceback import print_stack
-    print_stack()
+      knife_requests[boss].append(KnifeRequest(ctx.author, boss, damage, notice))
+    msg = f'{ctx.author.mention} ' + ('補償刀' if bool(extra) else '') + f'預約 {boss_numbers[boss]} , 傷害: {damage}, 備注: {notice}'
+  except:
+    #raise ValueError
+    msg = '請按照 !book [幾王] [傷害] [備注] 的方式報刀'
+    #sort the user input into different list base on value of variable boss.
 
-    msg = '請按照 !book [幾王] [第幾刀] [傷害] [備注] 的方式報刀'
+  #except Exception as err:
+    # for debug only
+    #from traceback import print_stack
+    #print_stack()
 
   await ctx.send(msg)
   await update_table()
 
 # Requests for each boss (long make up time) !extra
 @bot.command()
+<<<<<<< HEAD
 async def eb(ctx, boss, numknife, damage, notice="無"):
   await b(ctx, boss, numknife, damage, notice, True)
 
 #CancelBooking !unbook
 @bot.command()
 async def ub(ctx, numknife):
+=======
+async def eb(ctx, boss, damage, notice="無"):
+  await b(ctx, boss, damage, notice, True)
+
+#CancelBooking !unbook
+@bot.command()
+async def ub(ctx, bossnum):
+>>>>>>> development
   if not is_in_channel(ctx, "command"):
     return
 
   def filter_function(knife_request):
     if ctx.author.display_name != knife_request.user.display_name:
       return True # All non-author entries must stay
-    return knife_request.numknife != int(numknife) # requests with different numknife stay
+    return knife_request.boss != int(bossnum) # requests with different bossnum stay
 
   # Loop through all bosses
   for boss in range(len(knife_requests)):
@@ -189,7 +204,7 @@ async def ub(ctx, numknife):
       knife_requests[boss] = list(filter(filter_function, knife_requests[boss]))
     else:
       knife_requests[boss].apply_filter(filter_function)
-  await ctx.send(f'{ctx.author.mention} 已取消所有 第{numknife}刀 的報刀。')
+  await ctx.send(f'{ctx.author.mention} 已取消所有 {bossnum}王 的報刀。')
   await update_table()
 
 #CancelBookingforguildmember !unbookfor
@@ -232,8 +247,8 @@ class SosPlayer:
 sos_users = set()
 @bot.command()
 async def sos(ctx):
-  if not is_in_channel(ctx, "command"):
-    return
+  #if not is_in_channel(ctx, "command"):
+    #return
   sos_users.add(SosPlayer(ctx.author.mention, ctx.author.display_name))
   await ctx.send(f'{ctx.author.mention} 掛樹了，有人能幫幫他嗎？現時樹上人數: {len(sos_users)}')
   await update_table()
@@ -241,7 +256,7 @@ async def sos(ctx):
 #Nextboss !next
 current_boss = 1
 last_run_next = time.time()
-NEXT_COOLDOWN = 60 # 60s
+NEXT_COOLDOWN = 1 # 60s
 @bot.command()
 async def next(ctx):
   if not is_in_channel(ctx, "command"):
@@ -299,16 +314,16 @@ async def update_table():
       formatted += f'{info}, '
     return formatted
 
-  table = '```diff\n'
+  table = ''
   for i in range(1, len(boss_numbers)):
     if i == current_boss:
-      table += f'->{boss_numbers[i]}: {knife_requests[i]}<-\n'
+      table += f'**{boss_numbers[i]}:\n {knife_requests[i]}**\n==============================\n'
     else:
-      table += f'{boss_numbers[i]}: {knife_requests[i]}\n' # 一至五王
-  table += '\n'
-  table += f'{boss_numbers[0]}: {format_list_infos(knife_requests[0])}\n' # 補償
+      table += f'{boss_numbers[i]}:\n {knife_requests[i]}\n==============================\n' # 一至五王
+  table += ''
+  table += f'{boss_numbers[0]}: {format_list_infos(knife_requests[0])}\n==============================\n' # 補償
   table += f'樹上: {format_list_infos(sos_users) if len(sos_users)>0 else ""}\n'
-  table += '```'
+  table += ''
   await messages["table"].edit(content=table)
 
 # Save and Load everything in the table (knife_requests and sos_users)
