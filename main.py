@@ -72,7 +72,7 @@ async def showchannels(ctx):
 #Check rest of the num of knife !num
 @bot.command()
 async def num(ctx):
-  #Let user can use !num in any channel
+
   #if not is_in_channel(ctx, "command"):
     #return
   #get the data in (38,17) of first sheet of the google sheets we assigned.
@@ -139,7 +139,7 @@ boss_numbers = ['短補', '一王', '二王', '三王', '四王', '五王']
 knife_requests = [[]] + [KnifeRequests() for _ in range(len(boss_numbers)-1)]
 
 @bot.command()
-async def b(ctx, boss, damage, notice="無", extra=False):
+
   if not is_in_channel(ctx, "command"):
     return
 
@@ -167,12 +167,7 @@ async def b(ctx, boss, damage, notice="無", extra=False):
 
 # Requests for each boss (long make up time) !extra
 @bot.command()
-async def eb(ctx, boss, damage, notice="無"):
-  await b(ctx, boss, damage, notice, True)
 
-#CancelBooking !unbook
-@bot.command()
-async def ub(ctx, bossnum):
   if not is_in_channel(ctx, "command"):
     return
 
