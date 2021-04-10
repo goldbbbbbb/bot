@@ -72,8 +72,9 @@ async def showchannels(ctx):
 #Check rest of the num of knife !num
 @bot.command()
 async def num(ctx):
-  if not is_in_channel(ctx, "command"):
-    return
+  #let user can use !num in any channel
+  #if not is_in_channel(ctx, "command"):
+    #return
   #get the data in (38,17) of first sheet of the google sheets we assigned.
   result = sheet.cell(38,17).value
   await ctx.send(f'目前仍有 {result} 刀未出。')
@@ -198,7 +199,7 @@ async def ubf(ctx, boss, mention):
     return
 
   target_id = mention[3:-1]
-  target_user = await bot.fetch_user(target_id)
+  target_user = await ctx.guild.fetch_member(target_id)
   def filter_for_non_author(knife_request):
     return target_user.display_name != knife_request.user.display_name
   
@@ -240,7 +241,7 @@ async def sos(ctx):
 #Nextboss !next
 current_boss = 1
 last_run_next = time.time()
-NEXT_COOLDOWN = 1 # 60s
+NEXT_COOLDOWN = 60 # 60s
 @bot.command()
 async def next(ctx):
   if not is_in_channel(ctx, "command"):
