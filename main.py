@@ -6,7 +6,7 @@ from discord.ext import commands
 import time
 #import gspread
 import shelve
-from oauth2client.service_account import ServiceAccountCredentials
+#from oauth2client.service_account import ServiceAccountCredentials
 
 #setting to read the data of sheet which we assigned
 
