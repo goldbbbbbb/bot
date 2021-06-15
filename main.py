@@ -4,16 +4,16 @@ import discord
 from discord.enums import Status
 from discord.ext import commands
 import time
-import gspread
+#import gspread
 import shelve
 from oauth2client.service_account import ServiceAccountCredentials
 
 #setting to read the data of sheet which we assigned
 
-scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
-creds = ServiceAccountCredentials.from_json_keyfile_name('pekodcbot.json',scope)
-client = gspread.authorize(creds)
-sheet = client.open('5月出刀紀錄').sheet1
+#scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
+#creds = ServiceAccountCredentials.from_json_keyfile_name('pekodcbot.json',scope)
+#client = gspread.authorize(creds)
+#sheet = client.open('5月出刀紀錄').sheet1
 
 #prefix of the commands in server.
 bot = discord.ext.commands.Bot(command_prefix = "!")
@@ -77,14 +77,14 @@ async def showchannels(ctx):
   await ctx.send(msg)
 
 #Check rest of the num of knife !num
-@bot.command()
-async def num(ctx):
+#@bot.command()
+#async def num(ctx):
   #Let user can use !num in any channel
   #if not is_in_channel(ctx, "command"):
     #return
   #get the data in (94,2) of first sheet of the google sheets we assigned.
-  result = sheet.cell(94,2).value
-  await ctx.send(f'目前仍有 {result} 刀未出。')
+  #result = sheet.cell(94,2).value
+  #await ctx.send(f'目前仍有 {result} 刀未出。')
 
 #BookBoss !book
 
