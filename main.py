@@ -1,19 +1,10 @@
 # IMPORT DISCORD.PY. ALLOWS ACCESS TO DISCORD'S API.
-# IMPORT GSPREAD, ALLOWS ACCESS TO READ GOOGLE SHEETS.
 import discord
 from discord.enums import Status
 from discord.ext import commands
 import time
-#import gspread
 import shelve
-#from oauth2client.service_account import ServiceAccountCredentials
 
-#setting to read the data of sheet which we assigned
-
-#scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
-#creds = ServiceAccountCredentials.from_json_keyfile_name('pekodcbot.json',scope)
-#client = gspread.authorize(creds)
-#sheet = client.open('5月出刀紀錄').sheet1
 
 #prefix of the commands in server.
 bot = discord.ext.commands.Bot(command_prefix = "!")
@@ -75,18 +66,6 @@ async def showchannels(ctx):
   for name, channel in channels.items():
     msg += f'{name}: {channel.mention}\n'
   await ctx.send(msg)
-
-#Check rest of the num of knife !num
-#@bot.command()
-#async def num(ctx):
-  #Let user can use !num in any channel
-  #if not is_in_channel(ctx, "command"):
-    #return
-  #get the data in (94,2) of first sheet of the google sheets we assigned.
-  #result = sheet.cell(94,2).value
-  #await ctx.send(f'目前仍有 {result} 刀未出。')
-
-#BookBoss !book
 
 class KnifeRequest:
   def __init__(self, user, boss, damage, notice):
@@ -157,14 +136,14 @@ stage3 = [0,7000000,9000000,13000000,15000000,20000000]
 stage4 = [0,17000000,18000000,20000000,21000000,23000000]
 stage5 = [0,85000000,90000000,95000000,100000000,110000000]
 bosshp = 0
-remainhp = 0
+remainhp = 6000000
 
 @bot.command()
 async def b(ctx, boss, damage, notice="無", extra=False):
   if not is_in_channel(ctx, "command"):
     return
 
-  await b_content(ctx, boss, damage, notice="無", extra=False)
+  await b_content(ctx, boss, damage, notice, extra)
 
 async def b_content(ctx, boss, damage, notice="無", extra=False):
 
@@ -313,6 +292,7 @@ reports = {}
 remainknife = {}
 namelist = {}
 resetknife = {}
+extraknife = {}
 
 #Register as guild member
 @bot.command()
@@ -337,17 +317,33 @@ async def unreg(ctx):
 #reset the num of knife(when 5:00)
 @bot.command()
 async def reset(ctx):
+
+  if not is_in_channel(ctx, "admin"):
+    return
+  
   remainknife.update(resetknife)
 
 #Check the remain knife real time
 @bot.command()
 async def 查刀(ctx):
-  remain = f'```目前剩餘刀數：\n\n'
+  remain = f'```目前剩餘刀數\n\n'
   for dcid, num in remainknife.items():
     dcname = namelist[dcid]
-    remain += f'{dcname}    剩餘{num}刀\n'
+    remain += f'剩餘{num}刀         {dcname}\n'
+  remain += f'\n'
+  remain += f'還剩 {sum(remainknife.values())} 刀'
   remain += '```'
   await ctx.send(remain)
+
+#Check the remain extra knife real time
+@bot.command()
+async def 殘刀(ctx):
+  extraremain = f'```補償刀清單\n\n'
+  for dcid, time in extraknife.items():
+    dcname = namelist[dcid]
+    extraremain += f'{time}秒         {dcname}\n'
+  extraremain += '```'
+  await ctx.send(extraremain)
 
 #Tell the control field that you are going into the fight
 @bot.command()
@@ -358,6 +354,9 @@ async def 進(ctx):
   #check if the user used this function in same boss or not
   if (ctx.author.display_name in reports):
     await ctx.send(f'{ctx.author.mention} 你已經報過進刀了，不用再報一次。')
+
+  elif (remainknife[ctx.author.id] == 0):
+    await ctx.send(f'{ctx.author.mention}你已經出完三刀了，無法再報出/尾刀。')
 
   #import user display name into the list
   else:
@@ -380,7 +379,7 @@ async def 報(ctx, msg):
 
 #check the status of guild member
 @bot.command()
-async def stat(ctx):
+async def 控刀(ctx):
   stat = f'```目前進刀狀況：\n\n'
   for user, msg in reports.items():
     stat += f'{user} 已進場，報：{msg}\n'
@@ -403,24 +402,41 @@ async def 出(ctx, damage):
   else:
     bosshp = int(stage5[current_boss])
 
-  if remainhp == 0:
-    remainhp = bosshp - int(damage)
+  if remainhp <= 0:
+    await ctx.send(f'{ctx.author.mention}王已經倒了，你沒辦法造成傷害。')
   else:
-    remainhp = remainhp - int(damage)
+    if (remainknife[ctx.author.id] == 0):
+      await ctx.send(f'{ctx.author.mention}你已經出完三刀了，無法再報出/尾刀。')
+    elif remainhp == bosshp:
+      remainhp = bosshp - int(damage)
+    else:
+      remainhp = remainhp - int(damage)
 
-  if remainhp > 0:
-    await ctx.send(f'{ctx.author.mention} 已出場，對 {boss_numbers[current_boss]} 造成了{damage}點傷害，目前王還剩 {remainhp} 點血。')
-    remainknife[ctx.author.id] = remainknife[ctx.author.id] - 1
-    
-    #run the ub function
-    await ub_content(ctx, current_boss)
+    if (remainknife[ctx.author.id] != 0):
+      if (remainhp > 0):  
+        await ctx.send(f'{ctx.author.mention} 已出場，對 {boss_numbers[current_boss]} 造成了{damage}點傷害，目前王還剩 {remainhp} 點血。')
+        if extraknife.__contains__(ctx.author.id):
+          #run the ub function
+          await ub_content(ctx, current_boss)
 
-    del reports[ctx.author.display_name]
+          #remove the user from report list
+          del reports[ctx.author.display_name]
 
-  else:
-    # show the bossisdead msg
-    await ctx.send(f'{ctx.author.mention} 已出場，對 {boss_numbers[current_boss]} 造成了{damage}點傷害並收王。')
-    await ctx.send(f'{ctx.author.mention} 請使用指令 !尾 <秒數> <幾王>，若使用補償刀收王請輸入 !尾 0 0')
+          #remove the user from extraknife list
+          del extraknife[ctx.author.id]
+        else:
+          #numknife of that guild member minus 1
+          remainknife[ctx.author.id] = remainknife[ctx.author.id] - 1
+        
+          #run the ub function
+          await ub_content(ctx, current_boss)
+
+          #remove the user from report list
+          del reports[ctx.author.display_name]
+      else:
+        # show the bossisdead msg
+        await ctx.send(f'{ctx.author.mention} 已出場，對 {boss_numbers[current_boss]} 造成了{damage}點傷害並收王。')
+        await ctx.send(f'{ctx.author.mention} 請使用指令 !尾 <秒數> <幾王>，若使用補償刀收王請輸入 !尾 0 0')
   
   await update_table()
 
@@ -430,31 +446,113 @@ async def 尾(ctx, time, bossnum=0):
   if not is_in_channel(ctx, "group"):
     return
 
-  global reports
-  
-  #run the ub function
-  await ub_content(ctx, current_boss)
+  global reports, remainhp
 
   #run the eb function if the collecter is 正刀
   time = int(time)
   bossnum = int(bossnum)
-  if (time != 0):
+  if (remainknife[ctx.author.id] == 0):
+    await ctx.send(f'{ctx.author.mention}你已經出完三刀了，無法再報出/尾刀。')
+  elif (bossnum < 0 or bossnum > 5):
+    await ctx.send(f'{ctx.author.mention} 請按照 !尾 <秒數> <幾王> 的格式使用指令')
+
+  #情境一：非補償刀收王，非短補
+  elif (time != 0 and bossnum != 0):
+    #numknife of that guild member minus 1
     remainknife[ctx.author.id] = remainknife[ctx.author.id] - 1
-    if (bossnum != 0):
-      await b_content(ctx, bossnum, time, extra=True)
+
+    #run the b function
+    await b_content(ctx, bossnum, time, extra=True)
+
+    #run the ub function
+    await ub_content(ctx, current_boss)
+
+    #add user into extraknife list
+    extraknife[ctx.author.id] = time
+
+    # run the next function
+    # Show current/next boss info
+    await next_content(ctx)
+
+    # reset the remain hp
+    if round < 11:
+      remainhp = int(stage12[current_boss])
+    elif round < 35:
+      remainhp = int(stage3[current_boss]) 
+    elif round < 45:
+      remainhp = int(stage4[current_boss]) 
     else:
-      await b_content(ctx, 0, time, extra=True)
+      remainhp = int(stage5[current_boss])
+    stat = f'```目前進刀狀況：\n\n'
+    stat += '```'
+    reports = {}
+
+    await update_table()
+
+  #情境二：非補償刀收王，屬短補
+  elif (time != 0 and bossnum == 0):
+    #numknife of that guild member minus 1
+    remainknife[ctx.author.id] = remainknife[ctx.author.id] - 1
+
+    #run the b function
+    await b_content(ctx, 0, time, extra=True)
+
+    #run the ub function
+    await ub_content(ctx, current_boss)
+
+
+    #add user into extraknife list
+    extraknife[ctx.author.id] = time
+
+    # run the next function
+    # Show current/next boss info
+    await next_content(ctx)
+
+    # reset the remain hp
+    if round < 11:
+      remainhp = int(stage12[current_boss])
+    elif round < 35:
+      remainhp = int(stage3[current_boss]) 
+    elif round < 45:
+      remainhp = int(stage4[current_boss]) 
+    else:
+      remainhp = int(stage5[current_boss])
+    print(remainhp)
+
+    stat = f'```目前進刀狀況：\n\n'
+    stat += '```'
+    reports = {}
+
+    await update_table()
+
+  #情境三：補償刀收王
   else:
-    if (bossnum < 0 or bossnum > 6):
-      await ctx.send(f'{ctx.author.mention} 請按照 !尾 <秒數> <幾王> 的格式使用指令')
+    #run the ub function
+    await ub_content(ctx, current_boss)
 
-  # run the next function
-  # Show current/next boss info
-  await next_content(ctx)
+    # run the next function
+    # Show current/next boss info
+    await next_content(ctx)
 
-  stat = f'```目前進刀狀況：\n\n'
-  stat += '```'
-  reports = {}
+    #remove the user from extraknife list
+    del extraknife[ctx.author.id]
+
+    # reset the remain hp
+    if round < 11:
+      remainhp = int(stage12[current_boss])
+    elif round < 35:
+      remainhp = int(stage3[current_boss]) 
+    elif round < 45:
+      remainhp = int(stage4[current_boss]) 
+    else:
+      remainhp = int(stage5[current_boss])
+    print(remainhp)
+
+    stat = f'```目前進刀狀況：\n\n'
+    stat += '```'
+    reports = {}
+
+    await update_table()
 
 #Setbossnum !set
 @bot.command()
@@ -500,17 +598,18 @@ async def update_table():
 
 # meme set of the guild
 
-# @bot.event
-# async def on_message(message):
-#     if 'emperorthinking' in message.content:
-#       await message.channel.send(f"{message.author.mention} 你是不是找我麻煩？")
-#     else:
-#       await bot.process_commands(message)
+@bot.event
+async def on_message(message):
 
-#     if 'gay' in message.content:
-#       await message.channel.send(file=discord.File('C:/Users/GB/Desktop/meme/gay2.png'))
-#     else:
-#       await bot.process_commands(message)
+  if 'gay' in message.content:
+    await message.channel.send(file=discord.File('C:/Users/GB/Desktop/meme/gay2.png'))
+  elif 'emperorthinking' in message.content:
+    await message.channel.send(f"{message.author.mention} 你是不是找我麻煩？")
+  elif '背刺' in message.content:
+    await message.channel.send(file=discord.File('C:/Users/GB/Desktop/meme/背刺.png'))
+  else:
+    await bot.process_commands(message)
+ 
 
 #     if '成功人士' in message.content:
 #       await message.channel.send(file=discord.File('C:/Users/GB/Desktop/meme/success.jpg'))
