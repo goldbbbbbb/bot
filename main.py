@@ -372,10 +372,6 @@ async def 報(ctx, msg):
   if (ctx.author.display_name not in reports):
     await ctx.send(f'{ctx.author.mention} 你還沒報進刀，是要怎麼報正式戰狀況？')
 
-  #check if the user registered or not
-  if (ctx.author.id not in namelist):
-    await ctx.send(f'{ctx.author.mention} 你仍未登錄於查刀表，因此無法進刀。')
-
   else:
     reports[ctx.author.display_name] = msg
     print(reports)
