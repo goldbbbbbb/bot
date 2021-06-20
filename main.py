@@ -372,6 +372,10 @@ async def 報(ctx, msg):
   if (ctx.author.display_name not in reports):
     await ctx.send(f'{ctx.author.mention} 你還沒報進刀，是要怎麼報正式戰狀況？')
 
+  #check if the user registered or not
+  if (ctx.author.id not in namelist):
+    await ctx.send(f'{ctx.author.mention} 你仍未登錄於查刀表，因此無法進刀。')
+
   else:
     reports[ctx.author.display_name] = msg
     print(reports)
@@ -595,51 +599,6 @@ async def update_table():
   table += f'\n樹上: {format_list_infos(sos_users) if len(sos_users)>0 else ""}\n'
   table += ''
   await messages["table"].edit(content=table)
-
-# meme set of the guild
-
-@bot.event
-async def on_message(message):
-
-  if 'gay' in message.content:
-    await message.channel.send(file=discord.File('C:/Users/GB/Desktop/meme/gay2.png'))
-  elif 'emperorthinking' in message.content:
-    await message.channel.send(f"{message.author.mention} 你是不是找我麻煩？")
-  elif '背刺' in message.content:
-    await message.channel.send(file=discord.File('C:/Users/GB/Desktop/meme/背刺.png'))
-  else:
-    await bot.process_commands(message)
- 
-
-#     if '成功人士' in message.content:
-#       await message.channel.send(file=discord.File('C:/Users/GB/Desktop/meme/success.jpg'))
-#     else:
-#       await bot.process_commands(message)
-
-#     if '失敗人士' in message.content:
-#       await message.channel.send(file=discord.File('C:/Users/GB/Desktop/meme/loser.png'))
-#     else:
-#       await bot.process_commands(message)
-
-#     if 'her' in message.content:
-#       await message.channel.send(file=discord.File('C:/Users/GB/Desktop/meme/her.png'))
-#     else:
-#       await bot.process_commands(message)
-
-#     if '保150' in message.content:
-#       await message.channel.send(file=discord.File('C:/Users/GB/Desktop/meme/150.png'))
-#     else:
-#       await bot.process_commands(message)
-
-#     if '盡力' in message.content:
-#       await message.channel.send(file=discord.File('C:/Users/GB/Desktop/meme/盡力.png'))
-#     else:
-#       await bot.process_commands(message)
-
-#     if '背刺' in message.content:
-#       await message.channel.send(file=discord.File('C:/Users/GB/Desktop/meme/背刺.png'))
-#     else:
-#       await bot.process_commands(message)
 
 # Save and Load everything in the table (knife_requests and sos_users)
 var_to_save = ['knife_requests', 'sos_users']
