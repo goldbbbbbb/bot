@@ -436,7 +436,7 @@ async def out(ctx, damage):
       else:
         # show the bossisdead msg
         await ctx.send(f'{ctx.author.mention} 已出場，對 {boss_numbers[current_boss]} 造成了{damage}點傷害並收王。')
-        await ctx.send(f'{ctx.author.mention} 請使用指令 !尾 <秒數> <幾王>，若使用補償刀收王請輸入 !尾 0 0')
+        await ctx.send(f'{ctx.author.mention} 請使用指令 !尾 <秒數> <幾王>，若使用補償刀收王請輸入 !尾 0')
   
   await update_table()
 
