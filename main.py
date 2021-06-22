@@ -347,7 +347,7 @@ async def ek(ctx):
 
 #Tell the control field that you are going into the fight
 @bot.command()
-async def i(ctx):
+async def fight(ctx):
   if not is_in_channel(ctx, "group"):
     return
 
@@ -361,10 +361,10 @@ async def i(ctx):
   #import user display name into the list
   else:
     reports[ctx.author.display_name] = ''
-    await ctx.send(f'{ctx.author.mention} 已進場打 {boss_numbers[current_boss]}。')
+    await ctx.send(f'{ctx.author.mention} 已正式戰進場打 {boss_numbers[current_boss]}。')
 
 @bot.command()
-async def r(ctx, msg):
+async def report(ctx, msg):
   if not is_in_channel(ctx, "group"):
     return
 
@@ -388,7 +388,7 @@ async def stat(ctx):
 
 #for guild member report damage
 @bot.command()
-async def o(ctx, damage):
+async def out(ctx, damage):
   if not is_in_channel(ctx, "group"):
     return
 
@@ -442,7 +442,7 @@ async def o(ctx, damage):
 
 #for guild member report the extra second
 @bot.command()
-async def c(ctx, time, bossnum=0):
+async def kill(ctx, time, bossnum=0):
   if not is_in_channel(ctx, "group"):
     return
 
@@ -454,7 +454,7 @@ async def c(ctx, time, bossnum=0):
   if (remainknife[ctx.author.id] == 0):
     await ctx.send(f'{ctx.author.mention}你已經出完三刀了，無法再報出/尾刀。')
   elif (bossnum < 0 or bossnum > 5):
-    await ctx.send(f'{ctx.author.mention} 請按照 !尾 <秒數> <幾王> 的格式使用指令')
+    await ctx.send(f'{ctx.author.mention} 請按照 !kill <秒數> <幾王> 的格式使用指令')
 
   #情境一：非補償刀收王，非短補
   elif (time != 0 and bossnum != 0):
