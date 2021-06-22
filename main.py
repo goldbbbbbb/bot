@@ -297,6 +297,9 @@ extraknife = {}
 #Register as guild member
 @bot.command()
 async def reg(ctx, gameid):
+  if not is_in_channel(ctx, "group"):
+    return
+  
   if remainknife.__contains__(ctx.author.id):
     await ctx.send(f'{ctx.author.mention} 你已經登錄過了，不需要再登錄一次。')
   else:
@@ -308,6 +311,9 @@ async def reg(ctx, gameid):
 #Unregister for change the id
 @bot.command()
 async def unreg(ctx):
+  if not is_in_channel(ctx, "group"):
+    return
+    
   if remainknife.__contains__(ctx.author.id):
     del remainknife[ctx.author.id]
     await ctx.send(f'{ctx.author.mention} 已取消登錄。')
