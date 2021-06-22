@@ -337,7 +337,7 @@ async def num(ctx):
 
 #Check the remain extra knife real time
 @bot.command()
-async def extra(ctx):
+async def ek(ctx):
   extraremain = f'```補償刀清單\n\n'
   for dcid, time in extraknife.items():
     dcname = namelist[dcid]
@@ -347,7 +347,7 @@ async def extra(ctx):
 
 #Tell the control field that you are going into the fight
 @bot.command()
-async def in(ctx):
+async def i(ctx):
   if not is_in_channel(ctx, "group"):
     return
 
@@ -364,7 +364,7 @@ async def in(ctx):
     await ctx.send(f'{ctx.author.mention} 已進場打 {boss_numbers[current_boss]}。')
 
 @bot.command()
-async def report(ctx, msg):
+async def r(ctx, msg):
   if not is_in_channel(ctx, "group"):
     return
 
@@ -388,7 +388,7 @@ async def stat(ctx):
 
 #for guild member report damage
 @bot.command()
-async def out(ctx, damage):
+async def o(ctx, damage):
   if not is_in_channel(ctx, "group"):
     return
 
@@ -442,7 +442,7 @@ async def out(ctx, damage):
 
 #for guild member report the extra second
 @bot.command()
-async def collect(ctx, time, bossnum=0):
+async def c(ctx, time, bossnum=0):
   if not is_in_channel(ctx, "group"):
     return
 
