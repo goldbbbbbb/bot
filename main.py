@@ -325,7 +325,7 @@ async def reset(ctx):
 
 #Check the remain knife real time
 @bot.command()
-async def 查刀(ctx):
+async def num(ctx):
   remain = f'```目前剩餘刀數\n\n'
   for dcid, num in remainknife.items():
     dcname = namelist[dcid]
@@ -337,7 +337,7 @@ async def 查刀(ctx):
 
 #Check the remain extra knife real time
 @bot.command()
-async def 殘刀(ctx):
+async def extra(ctx):
   extraremain = f'```補償刀清單\n\n'
   for dcid, time in extraknife.items():
     dcname = namelist[dcid]
@@ -347,7 +347,7 @@ async def 殘刀(ctx):
 
 #Tell the control field that you are going into the fight
 @bot.command()
-async def 進(ctx):
+async def in(ctx):
   if not is_in_channel(ctx, "group"):
     return
 
@@ -364,7 +364,7 @@ async def 進(ctx):
     await ctx.send(f'{ctx.author.mention} 已進場打 {boss_numbers[current_boss]}。')
 
 @bot.command()
-async def 報(ctx, msg):
+async def report(ctx, msg):
   if not is_in_channel(ctx, "group"):
     return
 
@@ -379,7 +379,7 @@ async def 報(ctx, msg):
 
 #check the status of guild member
 @bot.command()
-async def 控刀(ctx):
+async def stat(ctx):
   stat = f'```目前進刀狀況：\n\n'
   for user, msg in reports.items():
     stat += f'{user} 已進場，報：{msg}\n'
@@ -388,7 +388,7 @@ async def 控刀(ctx):
 
 #for guild member report damage
 @bot.command()
-async def 出(ctx, damage):
+async def out(ctx, damage):
   if not is_in_channel(ctx, "group"):
     return
 
@@ -442,7 +442,7 @@ async def 出(ctx, damage):
 
 #for guild member report the extra second
 @bot.command()
-async def 尾(ctx, time, bossnum=0):
+async def collect(ctx, time, bossnum=0):
   if not is_in_channel(ctx, "group"):
     return
 
